@@ -38,14 +38,31 @@ def test_resize_detect_and_persist(monkeypatch):
     result = handler.process_one("my-bucket", "uploads/photo.jpg")
 
     assert result["resized_key"] == "resized/photo.jpg"
+    assert result["thumbnail_key"] == "thumbnails/photo.jpg"
     assert result["labels"] == [{"name": "Sky", "confidence": 99.12}]
 
-    # resized longest side is clamped to MAX_DIMENSION
-    saved = fake_s3.put_object.call_args.kwargs
-    resized = Image.open(io.BytesIO(saved["Body"]))
+    calls = fake_s3.put_object.call_args_list
+    assert len(calls) == 2
+
+    # AC4 — resized/ object still produced with correct key and size
+    resized_call = calls[0].kwargs
+    assert resized_call["Key"] == "resized/photo.jpg"
+    resized = Image.open(io.BytesIO(resized_call["Body"]))
     assert max(resized.size) <= handler.MAX_DIMENSION
 
+    # AC1 — thumbnails/ object created with same base filename
+    thumb_call = calls[1].kwargs
+    assert thumb_call["Key"] == "thumbnails/photo.jpg"
+
+    # AC2 — longest side <= 150px AND aspect ratio preserved
+    # 2000x1500 -> scale = 150/2000 = 0.075 -> 150x112.5 -> Pillow rounds to 150x113
+    thumb = Image.open(io.BytesIO(thumb_call["Body"]))
+    assert thumb.size == (150, 113), f"expected (150, 113), got {thumb.size}"
+
+    # AC3 — DynamoDB record gains thumbnail_key
     fake_dynamo.put_item.assert_called_once()
+    item = fake_dynamo.put_item.call_args.kwargs["Item"]
+    assert item["thumbnail_key"] == {"S": "thumbnails/photo.jpg"}
 
 
 def test_pipeline_survives_missing_rekognition(monkeypatch):
@@ -63,4 +80,7 @@ def test_pipeline_survives_missing_rekognition(monkeypatch):
     result = handler.process_one("my-bucket", "uploads/photo.jpg")
 
     assert result["labels"] == []
+    assert result["thumbnail_key"] == "thumbnails/photo.jpg"
     fake_dynamo.put_item.assert_called_once()  # metadata still written
+    item = fake_dynamo.put_item.call_args.kwargs["Item"]
+    assert "thumbnail_key" in item
