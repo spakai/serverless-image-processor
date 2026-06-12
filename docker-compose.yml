@@ -1,0 +1,13 @@
+services:
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      # Community services used here: s3, lambda, dynamodb, iam, logs.
+      # Rekognition is NOT available on community and is skipped by the handler.
+      - DEBUG=1
+      - LAMBDA_REMOVE_CONTAINERS=true
+    volumes:
+      # Lambda runs in its own container, so LocalStack needs the Docker socket.
+      - "/var/run/docker.sock:/var/run/docker.sock"

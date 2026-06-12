@@ -1,0 +1,4 @@
+pytest
+ruff
+boto3
+Pillow==10.4.0
