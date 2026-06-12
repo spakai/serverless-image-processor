@@ -32,6 +32,11 @@ docker-compose.yml     LocalStack
 
 - Docker, Python 3.12, Terraform >= 1.5
 - `pip install -r requirements-dev.txt terraform-local awscli-local`
+- A LocalStack auth token (free, non-commercial). Since 2026.03 LocalStack
+  requires one even for free-tier services. Sign up at
+  https://app.localstack.cloud, copy the token, and export it:
+  `export LOCALSTACK_AUTH_TOKEN=ls-...`
+  For CI, add it as a repo secret named `LOCALSTACK_AUTH_TOKEN`.
 
 ## Run locally (LocalStack)
 

@@ -5,7 +5,10 @@ services:
       - "4566:4566"
     environment:
       # Community services used here: s3, lambda, dynamodb, iam, logs.
-      # Rekognition is NOT available on community and is skipped by the handler.
+      # As of 2026.03, LocalStack requires an auth token even for the free tier.
+      # Get a free (non-commercial) token at https://app.localstack.cloud and
+      # export it: `export LOCALSTACK_AUTH_TOKEN=...` before docker compose up.
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:-}
       - DEBUG=1
       - LAMBDA_REMOVE_CONTAINERS=true
     volumes:

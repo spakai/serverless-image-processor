@@ -31,16 +31,24 @@ jobs:
 
       - name: Start LocalStack
         # Use the repo's own compose file so CI matches local dev exactly.
-        # s3 / lambda / dynamodb / iam are community services, no token needed.
+        # As of 2026.03 LocalStack needs an auth token even for free services.
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           docker compose up -d
           echo "Waiting for LocalStack to report healthy..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1; then
-              echo "LocalStack is up"; break
+          ok=""
+          for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:4566/_localstack/health >/dev/null 2>&1; then
+              ok=1; echo "LocalStack is up"; break
             fi
             sleep 2
           done
+          if [ -z "$ok" ]; then
+            echo "::error::LocalStack did not become healthy. Container logs:"
+            docker compose logs localstack
+            exit 1
+          fi
 
       - name: Build Lambda package
         run: bash scripts/build.sh
@@ -53,4 +61,4 @@ jobs:
       - name: Run integration test
         run: pytest tests/integration -v
         env:
-          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ENDPOINT_URL: http://127.0.0.1:4566
