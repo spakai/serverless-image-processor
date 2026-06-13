@@ -50,9 +50,12 @@ def test_upload_triggers_pipeline():
     key = f"uploads/it-{int(time.time())}.png"
     s3.put_object(Bucket=BUCKET, Key=key, Body=_png_bytes())
 
-    resized_key = "resized/" + key.split("/", 1)[1]
+    base = key.split("/", 1)[1]
+    resized_key = "resized/" + base
+    thumbnail_key = "thumbnails/" + base
 
     resized_found = False
+    thumbnail_found = False
     item_found = False
     for _ in range(30):  # ~30s budget for async Lambda
         time.sleep(1)
@@ -61,11 +64,17 @@ def test_upload_triggers_pipeline():
             resized_found = True
         except Exception:
             pass
+        try:
+            s3.head_object(Bucket=BUCKET, Key=thumbnail_key)
+            thumbnail_found = True
+        except Exception:
+            pass
         got = ddb.get_item(TableName=TABLE, Key={"image_key": {"S": key}})
         if "Item" in got:
             item_found = True
-        if resized_found and item_found:
+        if resized_found and thumbnail_found and item_found:
             break
 
     assert resized_found, f"resized object {resized_key} was never created"
+    assert thumbnail_found, f"thumbnail object {thumbnail_key} was never created"
     assert item_found, f"metadata row for {key} was never written"
