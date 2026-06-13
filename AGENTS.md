@@ -115,3 +115,17 @@ bash scripts/deploy-aws.sh
   endpoint to avoid IPv6 (`::1`) resolution surprises.
 - Lambda runs in its own container, so `docker-compose.yml` mounts the Docker
   socket. The host needs a running Docker daemon.
+
+
+## Architecture and decisions
+
+- System architecture (C4 diagrams + runtime flow): `docs/architecture.md`
+- Architecture Decision Records — *why* the system is built this way:
+  `docs/adr/`. Read the relevant ADR before changing anything it covers
+  (e.g. ADR 0002 before touching the S3 event filter, ADR 0003 before
+  changing how Rekognition is invoked).
+- When a change introduces a significant, hard-to-reverse decision, add a new
+  ADR (copy `docs/adr/0000-adr-template.md`). Never reverse a decided ADR by
+  editing it — supersede it with a new one.
+
+@docs/architecture.md
