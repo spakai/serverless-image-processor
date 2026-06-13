@@ -89,10 +89,12 @@ resource "aws_lambda_function" "processor" {
 
   environment {
     variables = {
-      METADATA_TABLE     = aws_dynamodb_table.metadata.name
-      RESIZED_PREFIX     = "resized/"
-      MAX_DIMENSION      = "1024"
-      ENABLE_REKOGNITION = tostring(var.enable_rekognition)
+      METADATA_TABLE         = aws_dynamodb_table.metadata.name
+      RESIZED_PREFIX         = "resized/"
+      MAX_DIMENSION          = "1024"
+      THUMBNAIL_PREFIX       = "thumbnails/"
+      THUMBNAIL_MAX_DIMENSION = "150"
+      ENABLE_REKOGNITION     = tostring(var.enable_rekognition)
     }
   }
 }

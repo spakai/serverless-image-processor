@@ -16,6 +16,8 @@ from PIL import Image
 METADATA_TABLE = os.environ["METADATA_TABLE"]
 RESIZED_PREFIX = os.environ.get("RESIZED_PREFIX", "resized/")
 MAX_DIMENSION = int(os.environ.get("MAX_DIMENSION", "1024"))
+THUMBNAIL_PREFIX = os.environ.get("THUMBNAIL_PREFIX", "thumbnails/")
+THUMBNAIL_MAX_DIMENSION = int(os.environ.get("THUMBNAIL_MAX_DIMENSION", "150"))
 ENABLE_REKOGNITION = os.environ.get("ENABLE_REKOGNITION", "true").lower() == "true"
 
 # LocalStack injects AWS_ENDPOINT_URL into the Lambda env. boto3 honours it on
@@ -55,6 +57,14 @@ def process_one(bucket, key):
     resized_key = RESIZED_PREFIX + key.split("/", 1)[-1]
     s3.put_object(Bucket=bucket, Key=resized_key, Body=buf.getvalue())
 
+    # 1b. Thumbnail -----------------------------------------------------------
+    thumb_img = Image.open(io.BytesIO(raw))
+    thumb_img.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION))
+    thumb_buf = io.BytesIO()
+    thumb_img.save(thumb_buf, format=img_format)
+    thumbnail_key = THUMBNAIL_PREFIX + key.split("/", 1)[-1]
+    s3.put_object(Bucket=bucket, Key=thumbnail_key, Body=thumb_buf.getvalue())
+
     # 2. Object detection ---------------------------------------------------
     # Real on AWS; absent on LocalStack community -> caught, pipeline stays green.
     labels = []
@@ -74,6 +84,7 @@ def process_one(bucket, key):
     dynamodb.put_item(TableName=METADATA_TABLE, Item={
         "image_key": {"S": key},
         "resized_key": {"S": resized_key},
+        "thumbnail_key": {"S": thumbnail_key},
         "original_size": {"S": f"{width}x{height}"},
         "resized_size": {"S": f"{new_width}x{new_height}"},
         "format": {"S": img_format},
@@ -81,4 +92,4 @@ def process_one(bucket, key):
         "processed_at": {"S": datetime.now(timezone.utc).isoformat()},
     })
 
-    return {"key": key, "resized_key": resized_key, "labels": labels}
+    return {"key": key, "resized_key": resized_key, "thumbnail_key": thumbnail_key, "labels": labels}
