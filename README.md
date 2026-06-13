@@ -10,12 +10,14 @@ actually runs). Built as a study project for **AWS SAA-C03** and **GH-600
 
 ```
 Upload ──► S3 (uploads/) ──► Lambda ──┬─► S3 (resized/)
+                                      ├─► S3 (thumbnails/  ≤ 150px)
                                       ├─► Rekognition (labels)
-                                      └─► DynamoDB (metadata)
+                                      └─► DynamoDB (metadata: image_key, resized_key,
+                                                             thumbnail_key, labels, …)
 ```
 
-The S3 event is filtered on the `uploads/` prefix, so the resized write to
-`resized/` does not re-trigger the function (avoids an infinite, billable loop).
+The S3 event is filtered on the `uploads/` prefix, so writes to `resized/` and
+`thumbnails/` do not re-trigger the function (avoids an infinite, billable loop).
 
 ## Layout
 
